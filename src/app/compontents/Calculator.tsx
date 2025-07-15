@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -146,16 +147,20 @@ export default function OffsetCalculator() {
   return (
     <main className="container mx-auto p-6 space-y-6">
       <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center mb-10 text-gray-100">Offset Printing Calculator</h1>
-      {errors.length > 0 && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Validation Error:</strong>
-          <ul className="list-disc list-inside mt-2">
-            {errors.map((err, i) => (
-              <li key={i}>{err}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* {
+        errors && errors.length > 0 && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Validation Error:</strong>
+            <ul className="list-disc list-inside mt-2">
+              {errors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        )
+      } */}
+
+
       <section className='flex justify-between items-center'>
 
         <form className="space-y-4 mx-auto w-1/2">
