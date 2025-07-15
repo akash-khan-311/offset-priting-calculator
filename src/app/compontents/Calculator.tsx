@@ -2,32 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Input from './Input';
+import { FormState, ResultsState } from '@/Types/types';
 
 
-type FormState = {
-  printQty: string;
-  printWidth: string;
-  printHeight: string;
-  paperWidth: string;
-  paperHeight: string;
-  color: string;
-  printSide: number;
-  sheetsPerPacket: string;
-  plateD: string;
-  plateDD: string;
-  printD: string;
-  printDD: string;
-};
-
-type ResultsState = {
-  perSheetQty: number;
-  totalSheets: number;
-  totalPackets: number;
-  impressions: number;
-  plateCost: number;
-  printCost: number;
-  totalCost: number;
-};
 
 
 export default function OffsetCalculator() {
@@ -55,13 +32,14 @@ export default function OffsetCalculator() {
     printCost: 0,
     totalCost: 0,
   });
+  const [errors, setErrors] = useState<string[]>([]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const numValue = name === 'color' ? value : value === '' ? '' : parseFloat(value);
     setForm((prev) => ({ ...prev, [name]: numValue }));
   };
-
   useEffect(() => {
     const {
       printQty,
@@ -75,20 +53,10 @@ export default function OffsetCalculator() {
       plateDD,
       printD,
       printDD,
+      color
     } = form;
 
-    if (!printQty || !printWidth || !printHeight || !paperWidth || !paperHeight) {
-      setResults({
-        perSheetQty: 0,
-        totalSheets: 0,
-        totalPackets: 0,
-        impressions: 0,
-        plateCost: 0,
-        printCost: 0,
-        totalCost: 0,
-      });
-      return;
-    }
+    const errorList: string[] = [];
 
     const qty = parseFloat(printQty);
     const pw = parseFloat(printWidth);
@@ -100,13 +68,31 @@ export default function OffsetCalculator() {
     const pdd = plateDD ? parseFloat(plateDD) : 0;
     const prd = printD ? parseFloat(printD) : 0;
     const prdd = printDD ? parseFloat(printDD) : 0;
+    const clr = color ? parseInt(color) : 1;
+
+    if ([qty, pw, ph, pprW, pprH].some((val) => isNaN(val) || val <= 0)) {
+      setResults({
+        perSheetQty: 0,
+        totalSheets: 0,
+        totalPackets: 0,
+        impressions: 0,
+        plateCost: 0,
+        printCost: 0,
+        totalCost: 0,
+      });
+      errorList.push('Please enter positive values for all required inputs.');
+      setErrors(errorList);
+      return;
+    }
+
+    setErrors([]);
 
     const sheetFitWidth = Math.floor(pprW / pw);
     const sheetFitHeight = Math.floor(pprH / ph);
     const perSheetQty = sheetFitWidth * sheetFitHeight;
     const totalSheets = perSheetQty ? Math.ceil(qty / perSheetQty) : 0;
     const totalPackets = spp ? Math.ceil(totalSheets / spp) : 0;
-    const impressions = totalSheets * printSide;
+    const impressions = totalSheets * printSide * clr;
 
     const plateCost = pd + pdd;
     const printCost = ((prd * impressions) / 1000) + ((prdd * impressions) / 1000);
@@ -114,35 +100,75 @@ export default function OffsetCalculator() {
 
     setResults({ perSheetQty, totalSheets, totalPackets, impressions, plateCost, printCost, totalCost });
   }, [form]);
+  const printW = parseFloat(form.printWidth);
+  const printH = parseFloat(form.printHeight);
 
-  const tableRows = [
-    'Small Size (Demy)',
-    'Quarter Size (Demy)',
-    'Half Size (Demy)',
-    'Full Size (Double Demy)'
-  ];
+  const tableData = [
+    {
+      title: 'Full Size (Double Demy)',
+      width: printW,
+      height: printH,
+    },
+    {
+      title: 'Half Size (Demy)',
+      width: printW,
+      height: printH ? printH / 2 : 0,
+    },
+    {
+      title: 'Quarter Size (Demy)',
+      width: printW ? printW / 2 : 0,
+      height: printH ? printH / 2 : 0,
+    },
+    {
+      title: 'Small Size (Demy)',
+      width: printW ? printW / 2 : 0,
+      height: printH ? printH / 4 : 0,
+    },
+  ].map((row) => {
+    const pprW = parseFloat(form.paperWidth);
+    const pprH = parseFloat(form.paperHeight);
+    const qty = parseFloat(form.printQty);
+    const printSide = form.printSide;
+    const color = form.color ? parseInt(form.color) : 1;
+
+    const fitW = Math.floor(pprW / row.width);
+    const fitH = Math.floor(pprH / row.height);
+    const perSheetQty = fitW * fitH;
+    const totalSheets = perSheetQty ? Math.ceil(qty / perSheetQty) : 0;
+    const impressions = totalSheets * printSide * color;
+
+    return {
+      ...row,
+      impressions,
+    };
+  });
 
   return (
     <main className="container mx-auto p-6 space-y-6">
       <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center mb-10 text-gray-100">Offset Printing Calculator</h1>
-
+      {errors.length > 0 && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Validation Error:</strong>
+          <ul className="list-disc list-inside mt-2">
+            {errors.map((err, i) => (
+              <li key={i}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <section className='flex justify-between items-center'>
 
-        <div className="space-y-4 mx-auto w-1/2">
-          {[
-            { label: 'Print Qty.', name: 'printQty' },
-            { label: 'Print Width (inches)', name: 'printWidth' },
-            { label: 'Print Height (inches)', name: 'printHeight' },
-            { label: 'Paper Width (inches)', name: 'paperWidth' },
-            { label: 'Paper Height (inches)', name: 'paperHeight' },
-            { label: 'Per Packet Sheets', name: 'sheetsPerPacket' },
-            { label: 'Plate (Demy)', name: 'plateD' },
-            { label: 'Plate (Double Demy)', name: 'plateDD' },
-            { label: 'Printing (Per 1000 Demy)', name: 'printD' },
-            { label: 'Printing (Per 1000 Double Demy)', name: 'printDD' },
-          ].map(({ label, name }) => (
-            <Input key={name} label={label} name={name} value={form[name as keyof FormState]} onChange={handleChange} />
-          ))}
+        <form className="space-y-4 mx-auto w-1/2">
+          <Input label="Print Qty." name="printQty" value={form.printQty} onChange={handleChange} />
+          <Input label="Print Width (inches)" name="printWidth" value={form.printWidth} onChange={handleChange} />
+          <Input label="Print Height (inches)" name="printHeight" value={form.printHeight} onChange={handleChange} />
+          <Input label="Paper Width (inches)" name="paperWidth" value={form.paperWidth} onChange={handleChange} />
+          <Input label="Paper Height (inches)" name="paperHeight" value={form.paperHeight} onChange={handleChange} />
+          <Input label="Per Packet Sheets" name="sheetsPerPacket" value={form.sheetsPerPacket} onChange={handleChange} />
+          <Input label="Plate (Demy)" name="plateD" value={form.plateD} onChange={handleChange} />
+          <Input label="Plate (Double Demy)" name="plateDD" value={form.plateDD} onChange={handleChange} />
+          <Input label="Printing (Per 1000 Demy)" name="printD" value={form.printD} onChange={handleChange} />
+          <Input label="Printing (Per 1000 Double Demy)" name="printDD" value={form.printDD} onChange={handleChange} />
 
           <div className='flex justify-between gap-4 '>
             <div className="flex items-center gap-2 ">
@@ -163,22 +189,25 @@ export default function OffsetCalculator() {
               </select>
             </div>
           </div>
-        </div>
+        </form>
       </section>
 
       <section className="bg-slate-950 p-10 rounded-lg border mt-6 space-y-4">
         <h2 className="font-bold text-4xl text-green-600">Result Summary</h2>
-        <p className='text-2xl text-white'><strong>Per Sheet Printing Qty:</strong> {results.perSheetQty}</p>
-        <p className='text-2xl text-white'><strong>Total Sheets for Printing:</strong> {results.totalSheets}</p>
-        <p className='text-2xl text-white'><strong>Total Packets Needed:</strong> {results.totalPackets}</p>
-
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <p className='text-xl text-white'><strong>Per Sheet Printing Qty:</strong> {results.perSheetQty}</p>
+          <p className='text-xl text-white'><strong>Total Sheets for Printing:</strong> {results.totalSheets}</p>
+          <p className='text-xl text-white'><strong>Total Packets Needed:</strong> {results.totalPackets}</p>
+          <p className='text-xl text-white'><strong>Total Impressions:</strong> {results.impressions}</p>
+        </div>
 
         <div className="mt-6">
           <h3 className="font-semibold text-green-700 text-3xl">Estimated Cost Breakdown</h3>
-          <p className='text-2xl text-white'><strong>Plate Cost:</strong> {results.plateCost.toFixed(2)} ৳</p>
-          <p className='text-2xl text-white'><strong>Printing Cost:</strong> {results.printCost.toFixed(2)} ৳</p>
-          <p className="text-xl font-bold text-blue-700"><strong>Total Estimated Cost:</strong> {results.totalCost.toFixed(2)} ৳</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            <p className='text-xl text-white'><strong>Plate Cost:</strong> {results.plateCost.toFixed(2)} ৳</p>
+            <p className='text-xl text-white'><strong>Printing Cost:</strong> {results.printCost.toFixed(2)} ৳</p>
+            <p className="text-xl font-bold text-blue-700 col-span-2"><strong>Total Estimated Cost:</strong> {results.totalCost.toFixed(2)} ৳</p>
+          </div>
         </div>
       </section>
       <div>
@@ -193,12 +222,12 @@ export default function OffsetCalculator() {
             </tr>
           </thead>
           <tbody className='text-xl bg-blue-300 '>
-            {tableRows.map((title, i) => (
+            {tableData.map((row, i) => (
               <tr key={i}>
-                <td className="border p-5">{title}</td>
-                <td className="border p-5">{i === 0 ? form.printWidth : ''}</td>
-                <td className="border p-5">{i === 0 ? form.printHeight : ''}</td>
-                <td className="border p-5">{i === 0 ? results.impressions : ''}</td>
+                <td className="border p-5">{row.title}</td>
+                <td className="border p-5">{row.width ? row.width.toFixed(2) : ''}</td>
+                <td className="border p-5">{row.height ? row.height.toFixed(2) : ''}</td>
+                <td className="border p-5">{row.impressions}</td>
               </tr>
             ))}
           </tbody>

@@ -1,9 +1,4 @@
-interface InputProps {
-  label: string;
-  name: string;
-  value: string | number;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
+import { InputProps } from "@/Types/types";
 
 
 export default function Input({ label, name, value, onChange }: InputProps) {
